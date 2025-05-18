@@ -1,5 +1,5 @@
 // --- WebSocket setup ---
-const socket = new WebSocket('ws://localhost:3000');
+const socket = new WebSocket('wss://ecotrack-server-v9i3.onrender.com');
 const binMarkers = new Map(); // Map<binId, Leaflet marker>
 let routeControl = null; // For the routing control
 let currentRoute = null; // Current route polyline
