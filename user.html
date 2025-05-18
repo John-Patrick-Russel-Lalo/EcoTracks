@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EcoTrack - User Map Interface</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <style>
+    /* Base styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(to bottom, #f0fdf4, #dcfce7);
+      color: #333;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      padding: 0.5rem 1rem;
+      background-color: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      color: #16a34a;
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+
+    .logo-icon {
+      height: 1.5rem;
+      width: 1.5rem;
+      color: #16a34a;
+    }
+
+    /* Search container */
+    #search-container {
+      display: flex;
+      gap: 0.5rem;
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      margin-bottom: 1rem;
+    }
+
+    #search-input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      background-color: white;
+      color: #1f2937;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    #search-input:focus {
+      border-color: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+    }
+
+    #search-input::placeholder {
+      color: #9ca3af;
+    }
+
+    #search-btn {
+      padding: 0.75rem 1rem;
+      background-color: #16a34a;
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    #search-btn:hover {
+      background-color: #15803d;
+    }
+
+    /* Map container */
+    #map-wrapper {
+      flex: 1;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      margin-bottom: 1rem;
+      border: 2px solid white;
+      position: relative;
+    }
+
+    #map {
+      height: 60vh;
+      width: 100%;
+    }
+
+    /* Action panels */
+    .action-panel {
+      background-color: white;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      margin-bottom: 1rem;
+    }
+
+    .panel-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background-color: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
+
+    .btn:hover {
+      border-color: #22c55e;
+      background-color: #f0fdf4;
+      transform: translateY(-2px);
+    }
+
+    .btn-icon {
+      height: 1.5rem;
+      width: 1.5rem;
+      color: #16a34a;
+      margin-bottom: 0.5rem;
+    }
+
+    .btn-text {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #4b5563;
+    }
+
+    #addMarkBtn .btn-text {
+      color: #16a34a;
+    }
+
+    /* Bin Status Panel */
+    #bin-status-panel {
+      display: none; /* Hidden by default, will be shown when a bin is selected */
+    }
+
+    .status-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .status-icon {
+      height: 1.25rem;
+      width: 1.25rem;
+      color: #16a34a;
+    }
+
+    .status-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .status-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .status-option:hover {
+      transform: translateY(-2px);
+    }
+
+    .status-option.selected {
+      border-color: #16a34a;
+    }
+
+    .status-empty {
+      background-color: rgba(34, 197, 94, 0.1);
+    }
+
+    .status-empty:hover {
+      background-color: rgba(34, 197, 94, 0.2);
+    }
+
+    .status-half {
+      background-color: rgba(234, 179, 8, 0.1);
+    }
+
+    .status-half:hover {
+      background-color: rgba(234, 179, 8, 0.2);
+    }
+
+    .status-full {
+      background-color: rgba(239, 68, 68, 0.1);
+    }
+
+    .status-full:hover {
+      background-color: rgba(239, 68, 68, 0.2);
+    }
+
+    .status-indicator {
+      height: 2rem;
+      width: 2rem;
+      border-radius: 50%;
+      margin-bottom: 0.5rem;
+    }
+
+    .indicator-empty {
+      background-color: #22c55e; /* Green */
+    }
+
+    .indicator-half {
+      background-color: #eab308; /* Yellow */
+    }
+
+    .indicator-full {
+      background-color: #ef4444; /* Red */
+    }
+
+    .status-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .status-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .status-btn {
+      flex: 1;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .update-btn {
+      background-color: #16a34a;
+      color: white;
+    }
+
+    .update-btn:hover {
+      background-color: #15803d;
+    }
+
+    .cancel-btn {
+      background-color: #f3f4f6;
+      color: #4b5563;
+    }
+
+    .cancel-btn:hover {
+      background-color: #e5e7eb;
+    }
+
+    /* Legend */
+    .map-legend {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background-color: white;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      font-size: 0.75rem;
+    }
+
+    .legend-title {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .legend-items {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .legend-color {
+      height: 0.75rem;
+      width: 0.75rem;
+      border-radius: 50%;
+    }
+
+    .legend-green {
+      background-color: #22c55e;
+    }
+
+    .legend-yellow {
+      background-color: #eab308;
+    }
+
+    .legend-red {
+      background-color: #ef4444;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 1rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    /* Responsive adjustments */
+    @media (min-width: 768px) {
+      body {
+        padding: 1.5rem;
+      }
+
+      .buttons {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      #map {
+        height: 70vh;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      body {
+        padding: 2rem;
+      }
+
+      .container {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 1.5rem;
+      }
+
+      #map-wrapper {
+        margin-bottom: 0;
+      }
+
+      #map {
+        height: 80vh;
+      }
+
+      .buttons {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="index.html" class="logo">
+      <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+        <circle cx="12" cy="10" r="3" />
+      </svg>
+      <span>EcoTrack</span>
+    </a>
+  </div>
+
+  <div id="search-container">
+    <input type="text" id="search-input" placeholder="Search a location...">
+    <button id="search-btn">Search</button>
+  </div>
+
+  <div class="container">
+    <div id="map-wrapper">
+      <div id="map"></div>
+      
+      <!-- Map Legend -->
+      <div class="map-legend">
+        <div class="legend-title">Bin Status</div>
+        <div class="legend-items">
+          <div class="legend-item">
+            <div class="legend-color legend-green"></div>
+            <span>Empty</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color legend-yellow"></div>
+            <span>Half Full</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color legend-red"></div>
+            <span>Full</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panels-container">
+      <!-- Main Action Panel -->
+      <div class="action-panel">
+        <h2 class="panel-title">Waste Management Tools</h2>
+        <div class="buttons">
+          <button class="btn" id="addMarkBtn" onclick="enableBinPlacement()">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            <span class="btn-text">Add Garbage Bin</span>
+          </button>
+          <button class="btn" id="gtmlBtn" onclick="goToMyLocation()">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4M12 16h.01" />
+            </svg>
+            <span class="btn-text">My Location</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Bin Status Update Panel (hidden by default) -->
+      <div class="action-panel" id="bin-status-panel">
+        <div class="status-title">
+          <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+          </svg>
+          <h2 class="panel-title">Update Bin Status</h2>
+        </div>
+        
+        <div class="status-options">
+          <div class="status-option status-empty" onclick="selectStatus('empty')">
+            <div class="status-indicator indicator-empty"></div>
+            <span class="status-label">Empty</span>
+          </div>
+          <div class="status-option status-half" onclick="selectStatus('half')">
+            <div class="status-indicator indicator-half"></div>
+            <span class="status-label">Half Full</span>
+          </div>
+          <div class="status-option status-full" onclick="selectStatus('full')">
+            <div class="status-indicator indicator-full"></div>
+            <span class="status-label">Full</span>
+          </div>
+        </div>
+        
+        <div class="status-actions">
+          <button class="status-btn update-btn" onclick="updateBinStatus()">Update Status</button>
+          <button class="status-btn cancel-btn" onclick="cancelStatusUpdate()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>© <script>document.write(new Date().getFullYear())</script> EcoTrack. All rights reserved.</p>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  <script src="user.js"></script>
+  
+  <!-- Additional JavaScript for bin status functionality -->
+  <script>
+    // Variables to track the currently selected bin and status
+    let selectedBinId = null;
+    let selectedStatus = null;
+    
+    // Function to show the bin status panel when a bin is clicked
+    function showBinStatusPanel(binId) {
+      selectedBinId = binId;
+      document.getElementById('bin-status-panel').style.display = 'block';
+      // Clear any previously selected status
+      clearSelectedStatus();
+    }
+    
+    // Function to hide the bin status panel
+    function hideBinStatusPanel() {
+      document.getElementById('bin-status-panel').style.display = 'none';
+      selectedBinId = null;
+      selectedStatus = null;
+    }
+    
+    // Function to select a status
+    function selectStatus(status) {
+      selectedStatus = status;
+      
+      // Update UI to show selected status
+      clearSelectedStatus();
+      const statusElements = document.querySelectorAll('.status-option');
+      statusElements.forEach(el => {
+        if (el.classList.contains(`status-${status}`)) {
+          el.classList.add('selected');
+        }
+      });
+    }
+    
+    // Function to clear selected status
+    function clearSelectedStatus() {
+      const statusElements = document.querySelectorAll('.status-option');
+      statusElements.forEach(el => {
+        el.classList.remove('selected');
+      });
+    }
+    
+    // Function to update bin status
+    function updateBinStatus() {
+      if (!selectedBinId || !selectedStatus) {
+        alert('Please select a status for the bin');
+        return;
+      }
+      
+      // Send the status update to the server via WebSocket
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'updatebinstatus',
+          id: selectedBinId,
+          status: selectedStatus
+        }));
+        
+        // Hide the panel after updating
+        hideBinStatusPanel();
+      } else {
+        alert('Connection to server lost. Please refresh the page.');
+      }
+    }
+    
+    // Function to cancel status update
+    function cancelStatusUpdate() {
+      hideBinStatusPanel();
+    }
+    
+    // This function would be called from the map marker click event
+    // It's a placeholder - you'll need to integrate it with your existing code
+    function onBinMarkerClick(e) {
+      const binId = e.target.options.binId; // Assuming you store the bin ID in the marker options
+      showBinStatusPanel(binId);
+    }
+  </script>
+</body>
+</html>
